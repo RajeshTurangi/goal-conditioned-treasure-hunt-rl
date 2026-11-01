@@ -1,0 +1,31 @@
+{
+  "map": [
+    "########",
+    "#......#",
+    "#..#...#",
+    "#..#...#",
+    "#......#",
+    "#...#..#",
+    "#......#",
+    "########"
+  ],
+  "max_steps": 50,
+  "step_reward": -0.1,
+  "wall_penalty": -1.0,
+  "goal_reward": 10.0,
+  "distance_shaping_scale": 0.15,
+  "gamma": 0.95,
+  "seed": 2026,
+  "hidden_dim": 128,
+  "embedding_dim": 64,
+  "learning_rate": 0.001,
+  "batch_size": 64,
+  "replay_capacity": 20000,
+  "warmup_steps": 200,
+  "target_update_interval": 100,
+  "train_frequency": 1,
+  "epsilon_start": 1.0,
+  "epsilon_end": 0.05,
+  "epsilon_decay_steps": 5000
+}
+
