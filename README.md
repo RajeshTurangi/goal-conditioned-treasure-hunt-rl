@@ -68,6 +68,14 @@ Run automated tests:
 python -m unittest discover -s tests -v
 ```
 
+## Notebook workflow
+
+Open `notebooks/AVD894_Task1_Task2.ipynb` in VS Code or Jupyter. It runs the
+same maintained scripts from notebook cells, displays Task 1's exact path,
+trains/evaluates Task 2, and displays a learned rollout. The terminal is still
+needed once for environment setup and later for Git operations, but routine
+experiments can be run from the notebook.
+
 ## Hardware and runtime policy
 
 The scripts select CUDA only when PyTorch reports it as available; otherwise they use CPU.
