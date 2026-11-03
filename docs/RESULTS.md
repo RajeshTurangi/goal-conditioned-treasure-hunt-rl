@@ -44,6 +44,7 @@ The following numbers are measured and are not paper-reported numbers.
 - Map: `configs/task2_default.json`
 - Training seed: 2026
 - Training episodes: 1,000
+- Measured training wall time: approximately 52.6 seconds in the notebook run
 - Evaluation: 500 held-out seeds (`100000`–`100499`)
 - Learned success rate: 98.6%
 - Learned mean steps among successful episodes: 4.5456
