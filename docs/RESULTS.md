@@ -38,6 +38,22 @@ The following numbers are measured and are not paper-reported numbers.
 - Shortest-path reference mean steps: 4.4
 - Interpretation: measurable learning on the adapted simulator; further training and multi-seed evaluation are required before making a stronger performance claim.
 
+### Submission 1,000-episode Task 2 run
+
+- Device: CUDA (`torch 2.5.1+cu121`)
+- Map: `configs/task2_default.json`
+- Training seed: 2026
+- Training episodes: 1,000
+- Evaluation: 500 held-out seeds (`100000`–`100499`)
+- Learned success rate: 98.6%
+- Learned mean steps among successful episodes: 4.5456
+- Learned mean return: 9.9012
+- Shortest-path reference success rate: 100.0%
+- Shortest-path reference mean steps: 4.28
+- Checkpoint: `artifacts/task2_submission_1000/checkpoint.pt`
+- Evaluation file: `artifacts/task2_submission_1000/evaluation.json`
+- Interpretation: strong performance on the fixed adapted maze; not a claim of reproducing the original paper's experimental numbers.
+
 For later runs, record:
 
 - Git commit

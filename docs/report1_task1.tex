@@ -1,0 +1,211 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[a4paper,margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,array}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,backgroundcolor=\color{gray!8}}
+
+\title{Intermediate Task 1 Report\\\large Goal-Conditioned Treasure Hunt using Universal Value Function Approximators}
+\author{AVD894 Reinforcement Learning Course Project}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report describes the first milestone of our course project based on
+Universal Value Function Approximators (UVFAs) by Schaul et al. The paper's
+central idea is to estimate the value of a state relative to a specified goal,
+so that one value model can be reused for many goals. For Intermediate Task 1,
+we formulate a small goal-conditioned treasure-hunt game as a finite Markov
+Decision Process (MDP) and solve it exactly using value iteration. The exact
+solution serves as a mathematical reference for the simulator and the learning
+agent used in Intermediate Task 2.
+\end{abstract}
+
+\section{Paper in a nutshell}
+
+The paper ``Universal Value Function Approximators'' introduces value functions
+of the form
+\[
+    V(s,g;\theta),
+\]
+where $s$ is the current state and $g$ is a goal descriptor. A conventional
+value function is tied to one objective, whereas a UVFA is intended to represent
+many goal-conditioned value functions in one parameterized model. The model can
+share useful structure across both states and goals and can therefore estimate
+values for goals that were not explicitly observed during training.
+
+The paper develops state and goal representations and combines their learned
+embeddings. It also explains how the representation can be updated from
+reinforcement-learning experience. The contribution is important because it
+connects value-function approximation with multi-goal and transfer settings:
+the same agent can be asked to reach different targets without training an
+entirely independent value function for every target.
+
+The primary source is the ICML 2015 paper by Schaul, Horgan, Gregor, and Silver,
+available at \url{https://proceedings.mlr.press/v37/schaul15.html}.
+
+\section{Our project idea}
+
+We adapt the UVFA idea into a small, visual game called \emph{Goal-Conditioned
+Treasure Hunt}. The player is placed in a maze and must reach a specified goal
+cell. The goal may change between episodes. The project asks whether a single
+goal-conditioned value model can make useful decisions for many target cells.
+
+For Task 1, the purpose is not yet to train a neural network. Instead, we create
+a small finite MDP and calculate its optimal value function exactly. This gives
+us a ground-truth reference for later comparison. The adaptation is explicitly
+labelled as a course-project environment; it is not claimed to be an exact copy
+of every environment used in the paper.
+
+\section{Mathematical problem and MDP formulation}
+
+Let the maze contain a finite set of free cells $\mathcal{C}$. A state contains
+the current player position $p$ and the selected goal position $g$:
+\[
+    s=(p,g), \qquad p,g\in\mathcal{C}, \quad p\neq g.
+\]
+The action space is
+\[
+    \mathcal{A}=\{\text{up},\text{down},\text{left},\text{right}\}.
+\]
+
+The transition is deterministic. A legal action moves the player to an adjacent
+free cell. An action into a wall leaves the player in the same cell. The reward
+used in Task 1 is
+\[
+r(s,a)=
+\begin{cases}
++10, & \text{if the action reaches the goal},\\
+-0.1, & \text{if the action is a legal non-terminal movement},\\
+-1, & \text{if the action attempts to enter a wall}.
+\end{cases}
+\]
+The episode terminates when $p=g$. The objective is to maximize the discounted
+return
+\[
+    J(\pi)=\mathbb{E}_{\pi}\left[\sum_{t=0}^{T-1}\gamma^t r_t\right],
+\]
+with $\gamma=0.95$.
+
+For a deterministic transition function $T(s,a)$, value iteration applies the
+Bellman optimality update
+\[
+    V_{k+1}(s)=\max_{a\in\mathcal{A}}
+    \left[r(s,a)+\gamma V_k(T(s,a))\right].
+\]
+The continuation value is set to zero when the next state is terminal. The
+greedy policy is
+\[
+    \pi(s)=\arg\max_{a\in\mathcal{A}}
+    \left[r(s,a)+\gamma V(T(s,a))\right].
+\]
+
+\section{Implementation of the paper idea}
+
+The Task 1 implementation uses the project map in
+\texttt{configs/task1\_small.json}. It contains 22 free cells. Because both the
+player position and the goal position are part of the state, the number of
+ordered state-goal pairs is
+\[
+    22\times21=462.
+\]
+The state space is therefore larger than the number of visible cells, while the
+action space remains four-dimensional and discrete.
+
+The implementation proceeds as follows:
+\begin{enumerate}[leftmargin=*]
+    \item Load the fixed maze and reward parameters.
+    \item Enumerate every valid ordered pair of distinct free cells.
+    \item Initialize all values to zero.
+    \item Evaluate all four actions for every state.
+    \item Apply the Bellman optimality update synchronously.
+    \item Stop when the maximum value change is below the configured tolerance.
+    \item Extract the greedy policy and follow it from a selected start to a goal.
+\end{enumerate}
+
+This is a small exact reference solution rather than a neural approximation. It
+is useful because it confirms the MDP definition before we introduce replay,
+target networks, and function approximation in Task 2.
+
+\section{Code in a nutshell}
+
+The relevant source files are:
+\begin{itemize}[leftmargin=*]
+    \item \texttt{src/goal\_treasure/env.py}: maze dynamics, actions, rewards, and observations.
+    \item \texttt{src/goal\_treasure/exact.py}: value iteration and policy rollout.
+    \item \texttt{scripts/run\_task1.py}: command-line entry point that writes JSON and CSV outputs.
+    \item \texttt{configs/task1\_small.json}: reproducible map and numerical settings.
+\end{itemize}
+
+The main command is:
+\begin{lstlisting}[language=bash]
+python scripts/run_task1.py --config configs/task1_small.json \\
+    --output artifacts/task1
+\end{lstlisting}
+
+The command writes a summary file and a policy table. The same calculation can
+also be run from \texttt{notebooks/AVD894\_Task1\_Task2.ipynb}.
+
+\section{Results}
+
+The measured Task 1 result was obtained on 2 November 2026 using the supplied
+configuration:
+
+\begin{table}[h]
+\centering
+\caption{Exact Task 1 value-iteration result.}
+\begin{tabular}{lr}
+\toprule
+Quantity & Measured value\\
+\midrule
+Free cells & 22\\
+Ordered state-goal pairs & 462\\
+Number of actions & 4\\
+Discount factor & 0.95\\
+Value-iteration iterations & 10\\
+Final maximum value change & 0.0\\
+Example path length & 9 moves\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For the example start at $(1,1)$ and goal at $(5,6)$, the exact policy produced
+the path
+\[
+(1,1)\rightarrow(2,1)\rightarrow(3,1)\rightarrow(4,1)
+\rightarrow(5,1)\rightarrow(5,2)\rightarrow(5,3)
+\rightarrow(5,4)\rightarrow(5,5)\rightarrow(5,6).
+\]
+
+The result shows that the simplified problem is correctly specified and that a
+policy can be extracted from the value function. It does not yet measure neural
+generalization; that is the focus of Task 2.
+
+\section{Limitations and next step}
+
+The Task 1 map is fixed and small, and the transition is deterministic. The
+solution is exact because every state-goal pair can be enumerated. This does not
+scale directly to large maps or continuous observations. In Task 2, we therefore
+replace the table with a neural goal-conditioned value model and evaluate it on
+randomly generated start/goal episodes.
+
+\section{References}
+
+\begin{thebibliography}{9}
+\bibitem{schaul2015}
+Tom Schaul, Daniel Horgan, Karol Gregor, and David Silver,
+``Universal Value Function Approximators,''
+\emph{Proceedings of the 32nd International Conference on Machine Learning},
+PMLR 37, pp. 1312--1320, 2015.
+\url{https://proceedings.mlr.press/v37/schaul15.html}
+\end{thebibliography}
+
+\end{document}
+
