@@ -12,3 +12,13 @@ checkpoints/
 *.out
 *.synctex.gz
 
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+htmlcov/
+.coverage
+*.fls
+*.fdb_latexmk
+*.toc

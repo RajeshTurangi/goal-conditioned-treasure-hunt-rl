@@ -26,30 +26,69 @@ class TreasureWindow:
         self.cell_size = 52
         self.canvas = tk.Canvas(self.root, width=env.width * self.cell_size, height=env.height * self.cell_size, bg="white")
         self.canvas.pack(padx=10, pady=10)
-        self.info = tk.Label(self.root, anchor="w", justify="left", font=("Consolas", 10))
-        self.info.pack(fill="x", padx=10)
+        self.info = tk.Label(self.root, anchor="w", justify="left", font=("Segoe UI", 10), bg="#f3f6fa", padx=10, pady=8)
+        self.info.pack(fill="x", padx=10, pady=(0, 8))
         controls = tk.Frame(self.root)
         controls.pack(pady=(0, 10))
         tk.Button(controls, text="New random episode", command=self.new_episode).pack(side="left", padx=4)
         tk.Button(controls, text="Next RL step", command=self.step).pack(side="left", padx=4)
+        self.auto_button = tk.Button(controls, text="Auto-play", command=self.toggle_auto)
+        self.auto_button.pack(side="left", padx=4)
         tk.Button(controls, text="Quit", command=self.root.destroy).pack(side="left", padx=4)
         self.path: list[tuple[int, int]] = []
+        self.episode_return = 0.0
+        self.last_action: int | None = None
+        self.last_reward: float | None = None
+        self.auto_running = False
+        self.after_id: str | None = None
         self.new_episode()
 
     def new_episode(self) -> None:
+        self.stop_auto()
         self.env.reset()
         self.path = [self.env.position]
+        self.episode_return = 0.0
+        self.last_action = None
+        self.last_reward = None
         self.draw("new episode")
 
     def step(self) -> None:
         if self.env.position == self.env.goal or self.env.steps >= self.env.max_steps:
+            self.stop_auto()
             return
         with torch.no_grad():
             q_values = self.network(torch.from_numpy(self.env.state_vector()).unsqueeze(0).to(self.device), torch.from_numpy(self.env.goal_vector()).unsqueeze(0).to(self.device))
         action = int(q_values.argmax(dim=1).item())
         result = self.env.step(action)
+        self.last_action = action
+        self.last_reward = result.reward
+        self.episode_return += result.reward
         self.path.append(self.env.position)
-        self.draw(f"action={action} reward={result.reward:+.2f}")
+        self.draw("RL policy step")
+
+    def toggle_auto(self) -> None:
+        if self.auto_running:
+            self.stop_auto()
+            return
+        self.auto_running = True
+        self.auto_button.configure(text="Pause")
+        self.auto_step()
+
+    def auto_step(self) -> None:
+        if not self.auto_running:
+            return
+        self.step()
+        if self.env.position == self.env.goal or self.env.steps >= self.env.max_steps:
+            self.stop_auto()
+            return
+        self.after_id = self.root.after(260, self.auto_step)
+
+    def stop_auto(self) -> None:
+        self.auto_running = False
+        self.auto_button.configure(text="Auto-play")
+        if self.after_id is not None:
+            self.root.after_cancel(self.after_id)
+            self.after_id = None
 
     def draw(self, status: str) -> None:
         self.canvas.delete("all")
@@ -69,8 +108,24 @@ class TreasureWindow:
         self.canvas.create_oval(gc * self.cell_size + 12, gr * self.cell_size + 12, (gc + 1) * self.cell_size - 12, (gr + 1) * self.cell_size - 12, fill="#38a169", outline="")
         ar, ac = self.env.position
         self.canvas.create_oval(ac * self.cell_size + 15, ar * self.cell_size + 15, (ac + 1) * self.cell_size - 15, (ar + 1) * self.cell_size - 15, fill="#2563eb", outline="")
-        outcome = "SUCCESS" if self.env.position == self.env.goal else "running"
-        self.info.configure(text=f"Status: {status} | Episode: {outcome} | Steps: {self.env.steps}/{self.env.max_steps} | Blue=agent  Green=goal  Grey=wall")
+        if self.env.position == self.env.goal:
+            outcome = "GOAL REACHED"
+        elif self.env.steps >= self.env.max_steps:
+            outcome = "STEP LIMIT"
+        else:
+            outcome = "IN PROGRESS"
+        action_names = ("Up", "Down", "Left", "Right")
+        action_label = action_names[self.last_action] if self.last_action is not None else "—"
+        reward_label = f"{self.last_reward:+.2f}" if self.last_reward is not None else "—"
+        goal = self.env.goal
+        self.info.configure(
+            text=(
+                f"{outcome}     {status}\n"
+                f"Goal: row {goal[0]}, column {goal[1]}     Moves: {self.env.steps}/{self.env.max_steps}     "
+                f"Last action: {action_label} ({reward_label})     Episode return: {self.episode_return:.2f}\n"
+                "Blue = agent    Green = target    Grey = blocked cell    Light blue = visited path"
+            )
+        )
 
     def run(self) -> None:
         self.root.mainloop()

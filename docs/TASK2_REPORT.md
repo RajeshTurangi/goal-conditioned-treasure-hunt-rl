@@ -49,3 +49,34 @@ seeds and compares the learned policy with a shortest-path reference controller.
 `scripts/demo.py` opens a Tkinter window. It displays the maze, the agent, the
 current goal, the path, the episode status, and a button for each next model step.
 
+
+
+## Longer training comparison
+
+We kept the simulator, network, optimizer, reward shaping, epsilon schedule,
+and seed fixed, and increased the training budget from 1,000 to 5,000 episodes.
+The extended run collected 28,770 transitions. Both checkpoints were evaluated
+on the same 500 unseen random start/goal seeds.
+
+- 1,000 episodes: 493/500 successes (98.6%); mean successful length 4.546 moves;
+  mean return 9.9012.
+- 5,000 episodes: 500/500 successes (100%); mean successful length 4.284 moves;
+  mean return 10.1378.
+- Shortest-path reference: 500/500 successes; 4.280 mean moves; mean return 10.1382.
+
+For the 5,000-episode result, the Wilson 95% interval for success is
+99.24-100.00%. The percentile-bootstrap 95% interval for successful path length
+is 4.104-4.466 moves (20,000 resamples, seed 2026). The 1,000-episode intervals
+and comparison plot are in docs/RESULTS.md and
+docs/task2_training_comparison.png. This evidence supports a training-budget
+comparison on this one map; it does not establish generalization to different
+maps or quantify variation across independent training seeds.
+
+## Demonstration window
+
+Run scripts/demo.py with the 5,000-episode checkpoint. The Tkinter interface
+shows the agent, goal, obstacles, and visited path. Next RL step advances one
+action, Auto-play animates the learned policy, Pause stops it, and New random
+episode samples a new start and goal. The panel reports the selected action,
+reward, current return, and number of moves. This runs locally with Python's
+built-in Tkinter; it does not need a dataset or a web service.

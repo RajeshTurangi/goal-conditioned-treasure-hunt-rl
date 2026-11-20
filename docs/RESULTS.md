@@ -1,4 +1,4 @@
-# Results log
+﻿# Results log
 
 This file is intentionally a log, not a place for invented numbers.
 
@@ -70,4 +70,35 @@ For later runs, record:
 
 Do not compare against the original paper’s numbers unless the relevant
 experimental conditions have actually been reproduced.
+
+
+
+## Extended Task 2 training-budget comparison
+
+Measured on the same fixed map and the same 500 held-out seeds (100000-100499),
+with all other settings unchanged:
+
+| Training episodes | Successes | Success rate (Wilson 95% CI) | Mean steps when successful (bootstrap 95% CI) | Mean return |
+|---:|---:|---:|---:|---:|
+| 1,000 | 493/500 | 98.6% (97.14-99.32%) | 4.546 (4.349-4.744) | 9.9012 |
+| 5,000 | 500/500 | 100.0% (99.24-100.00%) | 4.284 (4.104-4.466) | 10.1378 |
+| Shortest-path reference | 500/500 | 100.0% | 4.280 moves | 10.1382 |
+
+The 5,000-episode training log contains 28,770 environment transitions and
+28,571 optimizer updates. Its last 500 training episodes succeeded at a rate of
+100%. On the matched evaluation sample it improved the observed result over the
+1,000-episode checkpoint. This comparison changes the training budget only; it
+does not establish better generalization beyond this fixed maze, and both
+checkpoints use the same training seed. The shortest-path controller knows the
+maze and is a reference, not an RL baseline.
+
+The Wilson intervals are for the per-episode success proportion. The path-length
+intervals are percentile bootstrap intervals over successful episodes using
+20,000 resamples with bootstrap seed 2026. Since the path-length intervals
+overlap, do not claim statistical separation of those two conditional means.
+The 100% observed success rate still has a nonzero uncertainty interval.
+
+Artifacts (ignored by Git) are in artifacts/task2_submission_1000/ and
+artifacts/task2_extended_5000/. The report figure is tracked at
+docs/task2_training_comparison.png.
 

@@ -9,8 +9,8 @@ Primary paper: <https://proceedings.mlr.press/v37/schaul15.html>
 This project turns the paper’s goal-conditioned value-function idea into a small,
 observable treasure-hunt game. It has two deliberately separate parts:
 
-- `task1_exact/`: a finite-grid MDP and exact value iteration, as required by Intermediate Task 1.
-- `task2_uvfa/`: a neural goal-conditioned value approximator, replay buffer, simulator, evaluation scripts, and a Tkinter demo, as required by Intermediate Task 2.
+- Task 1: a finite-grid MDP and exact value iteration, as required by Intermediate Task 1.
+- Task 2: a neural goal-conditioned value approximator, replay buffer, simulator, evaluation scripts, and a Tkinter demo, as required by Intermediate Task 2.
 
 The game environment is a course-project adaptation. It is not claimed to be the
 original experimental environment from the paper. The paper reproduction target is
@@ -26,8 +26,7 @@ Implemented through Intermediate Task 2:
 3. Randomized start/goal evaluation, baseline comparison, checkpointing, plots/CSV summaries,
    and an interactive demo.
 
-No extension claim is made yet. Machine-learning extensions and larger/randomized maps are
-reserved for later work.
+The measured training-budget comparison is limited to this fixed maze and one training seed. Algorithm and environment extensions, including randomized maps, are reserved for later work.
 
 ## Quick start
 
@@ -51,16 +50,25 @@ Run the short Task 2 smoke training run:
 ```powershell
 python scripts/train_task2.py --config configs/task2_default.json --episodes 80 --output artifacts/task2_smoke
 python scripts/evaluate_task2.py --config configs/task2_default.json --checkpoint artifacts/task2_smoke/checkpoint.pt --episodes 100 --output artifacts/task2_smoke/evaluation.json
+
+For the recorded comparison, train and evaluate both budgets on the same test
+seeds. These commands take about three minutes total on the RTX 3050:
+
+```powershell
+python scripts/train_task2.py --config configs/task2_default.json --episodes 1000 --output artifacts/task2_submission_1000
+python scripts/evaluate_task2.py --config configs/task2_default.json --checkpoint artifacts/task2_submission_1000/checkpoint.pt --episodes 500 --output artifacts/task2_submission_1000/evaluation.json
+python scripts/train_task2.py --config configs/task2_default.json --episodes 5000 --output artifacts/task2_extended_5000
+python scripts/evaluate_task2.py --config configs/task2_default.json --checkpoint artifacts/task2_extended_5000/checkpoint.pt --episodes 500 --output artifacts/task2_extended_5000/evaluation.json
+```
 ```
 
 Open the simulator window after a checkpoint exists:
 
 ```powershell
-python scripts/demo.py --config configs/task2_default.json --checkpoint artifacts/task2_smoke/checkpoint.pt
+python scripts/demo.py --config configs/task2_default.json --checkpoint artifacts/task2_extended_5000/checkpoint.pt
 ```
 
-The demo needs a desktop session. Use `--no-model` to inspect the simulator with a
-shortest-path controller before training.
+The demo needs a desktop session. **Next RL step** advances one action; **Auto-play** animates the episode; **Pause** stops it; **New random episode** samples a new start and target. The status panel shows actions, rewards, return, and moves. Use `--no-model` to inspect the simulator before training.
 
 Run automated tests:
 
@@ -79,9 +87,9 @@ experiments can be run from the notebook.
 ## Hardware and runtime policy
 
 The scripts select CUDA only when PyTorch reports it as available; otherwise they use CPU.
-The smoke run is intentionally small. A longer run must be planned from measured smoke-run
-throughput before starting it. Do not treat the generated smoke result as a reproduction of
-the paper’s reported numbers.
+On the RTX 3050 Laptop GPU, the measured 5,000-episode run took about 2.5 minutes.
+The fixed-maze training-budget comparison is an adaptation result, not a reproduction
+of the original paper's reported numbers.
 
 ## Project map
 

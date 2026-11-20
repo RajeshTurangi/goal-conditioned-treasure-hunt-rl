@@ -6,6 +6,7 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{graphicx}
 \usepackage{enumitem}
 \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
 \lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,backgroundcolor=\color{gray!8}}
@@ -24,9 +25,10 @@ game and train a neural UVFA-style action-value model. The model receives both
 the current state and a goal representation, and estimates the value of each of
 four movement actions. Training uses online simulator experience, replay memory,
 a target network, epsilon-greedy exploration, and a Huber temporal-difference
-loss. The final measured run used 1,000 training episodes and was evaluated on
-500 held-out random episodes. It achieved a 98.6\% success rate, compared with
-100\% for a shortest-path reference controller.
+loss. The baseline run used 1,000 training episodes; a longer 5,000-episode run was
+also measured. Both were evaluated on the same 500 held-out random episodes.
+The longer run achieved a 100\% observed success rate and a mean successful
+path length of 4.284 moves, close to the 4.280-move shortest-path reference.
 \end{abstract}
 
 \section{Idea: expected versus implemented}
@@ -54,7 +56,7 @@ number of internal obstacles. The observation is represented by:
     \item a separate one-hot encoding of the goal cell.
 \end{itemize}
 
-For the current configuration, the state vector has dimension 200 and the goal
+For the current configuration, the state vector has dimension 128 and the goal
 vector has dimension 64. The action space is
 \[
 \mathcal{A}=\{\text{up},\text{down},\text{left},\text{right}\}.
@@ -109,13 +111,14 @@ The fixed maze is specified in \texttt{configs/task2\_default.json}; start and
 goal cells are sampled using controlled random seeds.
 
 Training uses seed 2026. Episode $i$ uses the simulator seed $2026+i$. Testing
-uses separate seeds $100000$ through $100499$. Therefore, the evaluation is on
-new random start/goal configurations rather than on the same trajectories used
-during training.
+uses separate seeds $100000$ through $100499$. Both training budgets are
+evaluated on the exact same held-out start/goal episodes to make the comparison
+paired and reproducible.
 
 \subsection{Training settings}
 
-The submission run used the following settings:
+The baseline and extended runs used the same settings; only the number of
+training episodes changed:
 \begin{table}[h]
 \centering
 \caption{Task 2 training configuration.}
@@ -123,8 +126,8 @@ The submission run used the following settings:
 \toprule
 Setting & Value\\
 \midrule
-Training episodes & 1,000\\
-Measured training wall time & approximately 52.6 seconds\\
+Training episodes & 1,000 baseline; 5,000 extended\\
+Measured training wall time & about 53 seconds baseline; about 2.5 minutes extended\\
 Maximum steps per episode & 50\\
 Training seed & 2026\\
 Discount factor & 0.95\\
@@ -154,12 +157,12 @@ updates during training.
 The run can be reproduced from the project root with:
 \begin{lstlisting}[language=bash]
 python scripts/train_task2.py --config configs/task2_default.json \\
-    --episodes 1000 --output artifacts/task2_submission_1000 --device auto
+    --episodes 5000 --output artifacts/task2_extended_5000 --device auto
 
 python scripts/evaluate_task2.py --config configs/task2_default.json \\
-    --checkpoint artifacts/task2_submission_1000/checkpoint.pt \\
+    --checkpoint artifacts/task2_extended_5000/checkpoint.pt \\
     --episodes 500 \\
-    --output artifacts/task2_submission_1000/evaluation.json \\
+    --output artifacts/task2_extended_5000/evaluation.json \\
     --device auto
 \end{lstlisting}
 
@@ -170,38 +173,49 @@ commands manually.
 
 \section{Performance and results}
 
-The final measured evaluation used 500 held-out random episodes. The learned
-policy was compared with a breadth-first-search shortest-path controller that
-knows the maze layout. The reference is an upper-bound-style planning baseline,
-not another learned policy.
+Each evaluation contains 500 held-out random episodes. Both learned checkpoints
+were tested on the same seeds and compared with a breadth-first-search
+shortest-path controller that knows the maze layout. The reference is a planning
+baseline, not another learned policy. Success-rate intervals use the Wilson
+95\% interval; path-length intervals use a percentile bootstrap with 20,000
+resamples and seed 2026.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
-\caption{Task 2 performance on 500 held-out episodes.}
-\small
-\begin{tabular}{p{0.42\linewidth}rr}
+\caption{Task 2 performance on the same 500 held-out episodes.}
+\scriptsize
+\begin{tabular}{p{0.30\linewidth}rrr}
 \toprule
-Metric & Learned UVFA-style agent & Shortest-path reference\\
+Metric & 1,000 episodes & 5,000 episodes & Shortest-path reference\\
 \midrule
-Success rate & 98.6\% & 100.0\%\\
-Mean steps on successful learned episodes & 4.546 & --\\
-Mean steps across reference episodes & -- & 4.280\\
-Mean return & 9.901 & --\\
+Success rate (95\% Wilson CI) & 98.6\% [97.14, 99.32] & 100.0\% [99.24, 100.00] & 100.0\%\\
+Mean steps on successes (95\% bootstrap CI) & 4.546 [4.349, 4.744] & 4.284 [4.104, 4.466] & 4.280\\
+Mean return & 9.901 & 10.138 & 10.138\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The success rate indicates that the trained policy learned the main movement
-strategy and generalized well to the held-out random start/goal seeds for this
-fixed maze. It is slightly below the shortest-path reference, which is expected:
-the reference explicitly searches for a valid shortest path, while the RL agent
-must infer action values from experience.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.96\linewidth]{task2_training_comparison.png}
+\caption{Training-budget comparison on identical held-out episodes. Error bars in the success panel
+show Wilson 95\% intervals. The 5,000-episode checkpoint reached all 500
+goals and approached the shortest-path reference in moves.}
+\label{fig:training-comparison}
+\end{figure}
 
-The evaluation is stored in
-\url{artifacts/task2_submission_1000/evaluation.json}. The checkpoint is
-stored in \url{artifacts/task2_submission_1000/checkpoint.pt}. Training
-metadata and episode-level logs are stored in
-\url{artifacts/task2_submission_1000/training.json}.
+The 1,000-episode run missed 7 of 500 goals. The 5,000-episode run reached all
+500 goals and lowered the mean successful path length to 4.284, within 0.004
+moves of the shortest-path reference on this sample. The data support a
+training-budget improvement on this fixed maze and seed set. They do not show
+generalization to new maps, and the single training seed means run-to-run
+variation has not been estimated. The 100\% observed rate is not a guarantee of
+perfect future performance; its Wilson lower bound is 99.24\%.
+
+The 5,000-episode evaluation is stored in
+\texttt{artifacts/task2\_extended\_5000/evaluation.json}; its checkpoint and
+episode-level training log are stored beside it. The baseline result remains in
+\texttt{artifacts/task2\_submission\_1000/}.
 
 \section{Demonstration output}
 
@@ -209,7 +223,8 @@ The project provides two demonstration modes:
 \begin{enumerate}[leftmargin=*]
     \item The notebook displays an ASCII rollout and the aggregate evaluation metrics.
     \item \texttt{scripts/demo.py} opens a Tkinter window showing walls, the blue agent,
-    the green goal, the path, reward, and step count.
+    the green goal, visited path, last action and reward, episode return, and step count.
+    The interface supports single-step control and animated auto-play.
 \end{enumerate}
 
 The graphical interface is useful for presentation, while the JSON output is the
